@@ -760,7 +760,20 @@ if uploaded_file and sheet_name:
             st.subheader("ML Model Evaluation")
             st.write("Load a trained TF-IDF + LogisticRegression pipeline and evaluate it against the uploaded transactions. This compares the rule-based Category to the ML prediction when an 'Old Category' (label) is present.")
 
-            model_path = st.text_input("Model path", value=r"models/tfidf_logreg_pipeline.pkl")
+            # Model selection
+            model_type = st.radio(
+                "Select ML Model",
+                options=["Basic (TF-IDF only)", "Enhanced (TF-IDF + Context: salary, recurring)"],
+                help="Basic: narration-only TF-IDF | Enhanced: adds is_recurring and salary_probability features",
+                horizontal=True
+            )
+
+            if model_type == "Basic (TF-IDF only)":
+                model_path = st.text_input("Model path", value=r"models/tfidf_logreg_pipeline.pkl")
+                is_context_aware = False
+            else:
+                model_path = st.text_input("Model path", value=r"models/enhanced_model_with_context.pkl")
+                is_context_aware = True
 
             decision_mode = st.selectbox(
                 "Decision Mode",
@@ -779,6 +792,8 @@ if uploaded_file and sheet_name:
             if run_button:
                 try:
                     import pickle, json, io
+                    import pandas as pd
+                    import numpy as np
                     from pathlib import Path
                     try:
                         from sklearn.metrics import accuracy_score, precision_recall_fscore_support, confusion_matrix
@@ -791,22 +806,68 @@ if uploaded_file and sheet_name:
                         st.error(f"Model file not found: {model_path}")
                     else:
                         with open(model_file, 'rb') as f:
-                            pipeline = pickle.load(f)
+                            model_artifact = pickle.load(f)
 
                         if 'Normalized Narration' not in processed_df.columns:
                             st.error("Processed data missing 'Normalized Narration' column.")
                         else:
                             texts = processed_df['Normalized Narration'].astype(str).to_list()
-                            preds = pipeline.predict(texts)
-                            try:
-                                prob_arr = pipeline.predict_proba(texts)
-                                max_probs = prob_arr.max(axis=1)
-                            except Exception:
-                                max_probs = [None] * len(preds)
+
+                            # Extract model components based on type
+                            if is_context_aware:
+                                # Enhanced model: extract TF-IDF, scaler, clf from artifact dict
+                                try:
+                                    tfidf = model_artifact.get('tfidf')
+                                    scaler = model_artifact.get('scaler')
+                                    clf = model_artifact.get('clf')
+
+                                    if not all([tfidf, scaler, clf]):
+                                        st.error("Invalid enhanced model artifact structure.")
+                                    else:
+                                        # Transform narrations with TF-IDF
+                                        X_tfidf = tfidf.transform(texts)
+
+                                        # Add contextual features
+                                        is_recurring_arr = processed_df.get('is_recurring', pd.Series([0]*len(texts))).astype(int).values
+                                        salary_prob_arr = processed_df.get('salary_probability', pd.Series([0.0]*len(texts))).astype(float).values
+
+                                        # If missing, warn user
+                                        if 'is_recurring' not in processed_df.columns:
+                                            st.warning("is_recurring column not found; using zeros. For best results, regenerate features with train_enhanced_with_context.py")
+                                        if 'salary_probability' not in processed_df.columns:
+                                            st.warning("salary_probability column not found; using zeros.")
+
+                                        X_contextual = np.column_stack([is_recurring_arr, salary_prob_arr])
+                                        X_contextual = scaler.transform(X_contextual)
+
+                                        from scipy.sparse import hstack
+                                        X_combined = hstack([X_tfidf, X_contextual])
+
+                                        preds = clf.predict(X_combined)
+                                        try:
+                                            prob_arr = clf.predict_proba(X_combined)
+                                            max_probs = prob_arr.max(axis=1)
+                                        except Exception:
+                                            max_probs = [None] * len(preds)
+
+                                except Exception as e:
+                                    st.error(f"Failed to load enhanced model: {e}")
+                                    raise
+
+                            else:
+                                # Basic model: pipeline with fit/predict
+                                pipeline = model_artifact
+                                preds = pipeline.predict(texts)
+                                try:
+                                    prob_arr = pipeline.predict_proba(texts)
+                                    max_probs = prob_arr.max(axis=1)
+                                except Exception:
+                                    max_probs = [None] * len(preds)
 
                             ml_results = processed_df.copy()
                             ml_results['ML Prediction'] = preds
                             ml_results['ML Confidence'] = max_probs
+                            ml_results['Model Type'] = model_type
 
                             # Compute combined decision if requested
                             if decision_mode == 'ML-only':
@@ -846,10 +907,10 @@ if uploaded_file and sheet_name:
                                 prec_final, rec_final, f1_final, _ = precision_recall_fscore_support(y_true, y_pred_final, average='weighted', zero_division=0)
 
                                 metric_cols = st.columns(6)
-                                metric_cols[0].metric('ML Accuracy', f"{acc_ml:.4f}")
-                                metric_cols[1].metric('ML Precision', f"{prec_ml:.4f}")
-                                metric_cols[2].metric('ML Recall', f"{rec_ml:.4f}")
-                                metric_cols[3].metric('ML F1 (w)', f"{f1_ml:.4f}")
+                                metric_cols[0].metric(f'{model_type.split("(")[0].strip()} Accuracy', f"{acc_ml:.4f}")
+                                metric_cols[1].metric(f'{model_type.split("(")[0].strip()} Precision', f"{prec_ml:.4f}")
+                                metric_cols[2].metric(f'{model_type.split("(")[0].strip()} Recall', f"{rec_ml:.4f}")
+                                metric_cols[3].metric(f'{model_type.split("(")[0].strip()} F1 (w)', f"{f1_ml:.4f}")
                                 metric_cols[4].metric('Final Accuracy', f"{acc_final:.4f}")
                                 metric_cols[5].metric('Final F1 (w)', f"{f1_final:.4f}")
 

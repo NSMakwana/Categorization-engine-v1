@@ -45,5 +45,77 @@
         "rule_name": "INSURANCE_RULE",
         "patterns": ["INS"],
         "category": "INSURANCE"
+    },
+
+    {
+        "rule_name": "LOAN_RECOVERY_RULE",
+        "patterns": ["LOAN RECOVERY"],
+        "category": "LOAN"
+    },
+
+    {
+        "rule_name": "LOAN_PAYMENT_RULE",
+        "patterns": ["EMI", "LOAN PAYMENT"],
+        "category": "LOAN"
+    },
+
+    {
+        "rule_name": "SALARY_PAYMENT_RULE",
+        "patterns": ["SALARY PAYMENT", "BRN/SALARY"],
+        "category": "SALARY RECEIVED"
+    },
+
+    {
+        "rule_name": "BANK_CHARGES_RULE",
+        "patterns": ["CHRGS INCL GST", "PENAL CHARGE", "CHARGE"],
+        "category": "BANK CHARGES"
+    },
+
+    {
+        "rule_name": "FUEL_RULE",
+        "patterns": ["PETROL", "FUEL", "INDIAN OIL"],
+        "category": "FUEL"
+    },
+
+    {
+        "rule_name": "RECHARGE_RULE",
+        "patterns": ["RECHARGE", "MOBILE", "JIOPREPAID", "PREPAID"],
+        "category": "RECHARGE"
+    },
+
+    {
+        "rule_name": "CREDIT_CARD_PAYMENT_RULE",
+        "patterns": ["CREDITCARD PAYMENT", "CREDIT CARD"],
+        "category": "CREDIT CARD PAYMENT"
+    },
+
+    {
+        "rule_name": "CASH_DEPOSIT_RULE",
+        "patterns": ["CASH DEP", "SAK/CASH"],
+        "category": "CASH DEPOSIT"
+    },
+
+    {
+        "rule_name": "CASH_WITHDRAWAL_RULE",
+        "patterns": ["CASH WITHDRAWAL", "ATM WITHDRAWAL"],
+        "category": "CASH WITHDRAWAL"
+    },
+
+    {
+        "rule_name": "ACCOUNT_CLOSURE_RULE",
+        "patterns": ["CLOSURE A/C", "ACCOUNT CLOSURE"],
+        "category": "TRANSFER OUT"
+    },
+
+    {
+        "rule_name": "ECS_CHARGES_RULE",
+        "patterns": ["ECS TXN CHRGS", "ECS CHRGS"],
+        "category": "ECS BOUNCED CHARGES"
+    },
+
+    {
+        "rule_name": "HEALTH_INSURANCE_RULE",
+        "patterns": ["BUPA", "HEALTH"],
+        "category": "INSURANCE"
     }
 ]

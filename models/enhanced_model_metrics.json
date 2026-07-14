@@ -1,0 +1,43 @@
+{
+  "accuracy": 0.7878787878787878,
+  "precision": 0.9040404040404041,
+  "recall": 0.7878787878787878,
+  "f1": 0.8414918414918414,
+  "per_class_metrics": [
+    {
+      "label": "ELECTRONIC FUND TRANSFER",
+      "precision": 0.9583333333333334,
+      "recall": 0.8214285714285714,
+      "f1": 0.8846153846153846,
+      "support": 28
+    },
+    {
+      "label": "LOAN",
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 2
+    },
+    {
+      "label": "RECHARGE",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 1
+    },
+    {
+      "label": "SALARY RECEIVED",
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 1
+    },
+    {
+      "label": "TRAVEL",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 1
+    }
+  ]
+}
