@@ -213,7 +213,7 @@ def build_refinement_prompt(payload):
             "All required fields must be top-level keys on the returned object.",
             "Do not wrap the response in instruction, output_schema, semantic_payload, response, result, or answer.",
             "Do not use markdown fences or add explanatory prose.",
-            "Do not invent categories.",
+            "Suggested_category MUST be copied exactly from approved_categories — no paraphrasing, no invented names.",
             "Use NO_CHANGE when deterministic category is semantically correct.",
             "Keep semantic_reason short and ontology-aligned.",
             "Do not provide chain-of-thought or verbose reasoning.",
@@ -312,7 +312,7 @@ def _normalize_ai_output_shape(ai_output):
     return ai_output
 
 
-def call_ollama(prompt, model=DEFAULT_OLLAMA_MODEL, base_url=DEFAULT_OLLAMA_URL, timeout=120):
+def call_ollama(prompt, model=DEFAULT_OLLAMA_MODEL, base_url=DEFAULT_OLLAMA_URL, timeout=180):
     response = requests.post(
         f"{base_url.rstrip('/')}/api/generate",
         json={

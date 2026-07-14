@@ -20,7 +20,7 @@ def normalize_text(text):
     # replace multiple spaces with single space
     text = re.sub(r"\s+", " ", text)
 
-    # standardize separators
-    text = text.replace("-", "/")
+    # standardize separators (collapse runs of - or / to a single slash)
+    text = re.sub(r"[-/]+", "/", text)
 
     return text

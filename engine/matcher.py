@@ -1,7 +1,7 @@
 import re
 
 
-TOKEN_CHARS = "A-Z0-9"
+TOKEN_CHARS = "A-Z0-9_."
 
 
 def _normalize_for_match(text):
@@ -89,7 +89,7 @@ def any_token_match(terms, text, rule_name=None, source=None):
 
 def compact_tokens(text):
     normalized = _normalize_for_match(text)
-    return re.findall(r"[A-Z0-9]+", normalized)
+    return re.findall(r"[A-Z0-9_.]+", normalized)
 
 
 def clean_entity_text(text):

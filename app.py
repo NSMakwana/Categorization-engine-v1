@@ -738,11 +738,12 @@ if uploaded_file and sheet_name:
 
         st.success("File Loaded Successfully")
 
-        output_tab, training_tab, ai_tab = st.tabs(
+        output_tab, training_tab, ai_tab, ml_tab = st.tabs(
             [
                 "Classification Output",
                 "Training Review",
                 "AI Refinement",
+                "ML Evaluation",
             ]
         )
 
@@ -754,6 +755,163 @@ if uploaded_file and sheet_name:
 
         with ai_tab:
             _render_ai_refinement(processed_df)
+
+        with ml_tab:
+            st.subheader("ML Model Evaluation")
+            st.write("Load a trained TF-IDF + LogisticRegression pipeline and evaluate it against the uploaded transactions. This compares the rule-based Category to the ML prediction when an 'Old Category' (label) is present.")
+
+            model_path = st.text_input("Model path", value=r"models/tfidf_logreg_pipeline.pkl")
+
+            decision_mode = st.selectbox(
+                "Decision Mode",
+                options=["ML-only", "Rule-only", "Hybrid (rule overrides when Parser Confidence >= threshold)"],
+                index=0,
+            )
+
+            hybrid_threshold = None
+            if decision_mode.startswith("Hybrid"):
+                hybrid_threshold = st.slider("Parser Confidence threshold (rule override)", min_value=0.0, max_value=1.0, value=0.8, step=0.01)
+
+            gen_report = st.checkbox("Generate detailed error report (confusion matrix, per-class metrics, mismatches CSV)", value=True)
+
+            run_button = st.button("Run ML Evaluation")
+
+            if run_button:
+                try:
+                    import pickle, json, io
+                    from pathlib import Path
+                    try:
+                        from sklearn.metrics import accuracy_score, precision_recall_fscore_support, confusion_matrix
+                    except Exception as exc:
+                        st.error(f"scikit-learn is required for ML evaluation: {exc}")
+                        raise
+
+                    model_file = Path(model_path)
+                    if not model_file.exists():
+                        st.error(f"Model file not found: {model_path}")
+                    else:
+                        with open(model_file, 'rb') as f:
+                            pipeline = pickle.load(f)
+
+                        if 'Normalized Narration' not in processed_df.columns:
+                            st.error("Processed data missing 'Normalized Narration' column.")
+                        else:
+                            texts = processed_df['Normalized Narration'].astype(str).to_list()
+                            preds = pipeline.predict(texts)
+                            try:
+                                prob_arr = pipeline.predict_proba(texts)
+                                max_probs = prob_arr.max(axis=1)
+                            except Exception:
+                                max_probs = [None] * len(preds)
+
+                            ml_results = processed_df.copy()
+                            ml_results['ML Prediction'] = preds
+                            ml_results['ML Confidence'] = max_probs
+
+                            # Compute combined decision if requested
+                            if decision_mode == 'ML-only':
+                                ml_results['Final Category'] = ml_results['ML Prediction']
+                            elif decision_mode == 'Rule-only':
+                                ml_results['Final Category'] = ml_results['Category']
+                            else:  # Hybrid
+                                # use rule when Parser Confidence >= threshold, else ML
+                                def choose_final(row):
+                                    try:
+                                        pc = float(row.get('Parser Confidence') or 0.0)
+                                    except Exception:
+                                        pc = 0.0
+                                    if pc >= hybrid_threshold:
+                                        return row.get('Category')
+                                    return row.get('ML Prediction')
+
+                                ml_results['Final Category'] = ml_results.apply(choose_final, axis=1)
+
+                            st.markdown("### Example predictions (first 50)")
+                            display_cols = [c for c in [
+                                'Narration', 'Normalized Narration', 'Old Category', 'Category', 'Parser Confidence', 'ML Prediction', 'ML Confidence', 'Final Category'
+                            ] if c in ml_results.columns]
+                            st.dataframe(ml_results[display_cols].head(50), use_container_width=True)
+
+                            if 'Old Category' in ml_results.columns and gen_report:
+                                y_true = ml_results['Old Category'].astype(str).to_list()
+                                y_pred_ml = ml_results['ML Prediction'].astype(str).to_list()
+                                y_pred_final = ml_results['Final Category'].astype(str).to_list()
+
+                                # ML-only metrics
+                                acc_ml = accuracy_score(y_true, y_pred_ml)
+                                prec_ml, rec_ml, f1_ml, _ = precision_recall_fscore_support(y_true, y_pred_ml, average='weighted', zero_division=0)
+
+                                # Final metrics (depending on decision mode)
+                                acc_final = accuracy_score(y_true, y_pred_final)
+                                prec_final, rec_final, f1_final, _ = precision_recall_fscore_support(y_true, y_pred_final, average='weighted', zero_division=0)
+
+                                metric_cols = st.columns(6)
+                                metric_cols[0].metric('ML Accuracy', f"{acc_ml:.4f}")
+                                metric_cols[1].metric('ML Precision', f"{prec_ml:.4f}")
+                                metric_cols[2].metric('ML Recall', f"{rec_ml:.4f}")
+                                metric_cols[3].metric('ML F1 (w)', f"{f1_ml:.4f}")
+                                metric_cols[4].metric('Final Accuracy', f"{acc_final:.4f}")
+                                metric_cols[5].metric('Final F1 (w)', f"{f1_final:.4f}")
+
+                                # Per-class metrics
+                                labels_unique = sorted(list(set(y_true)))
+                                per_class = []
+                                p, r, f, s = precision_recall_fscore_support(y_true, y_pred_final, labels=labels_unique, zero_division=0)
+                                for lab, pp, rr, ff, supp in zip(labels_unique, p, r, f, s):
+                                    per_class.append({'label': lab, 'precision': float(pp), 'recall': float(rr), 'f1': float(ff), 'support': int(supp)})
+
+                                per_class_df = None
+                                try:
+                                    per_class_df = pd.DataFrame(per_class)
+                                    st.markdown('### Per-class metrics (Final)')
+                                    st.dataframe(per_class_df, use_container_width=True)
+                                except Exception:
+                                    pass
+
+                                # Confusion matrix for final predictions
+                                cm = confusion_matrix(y_true, y_pred_final, labels=labels_unique)
+                                cm_df = None
+                                try:
+                                    cm_df = pd.DataFrame(cm, index=labels_unique, columns=labels_unique)
+                                    st.markdown('### Confusion Matrix (Final)')
+                                    st.dataframe(cm_df, use_container_width=True)
+                                except Exception:
+                                    pass
+
+                                # Top mismatches with examples
+                                mismatches = ml_results[ml_results['Old Category'].astype(str) != ml_results['Final Category'].astype(str)].copy()
+                                mismatches['Old Category'] = mismatches['Old Category'].astype(str)
+                                mismatches['Final Category'] = mismatches['Final Category'].astype(str)
+                                mismatches['ML Prediction'] = mismatches['ML Prediction'].astype(str)
+
+                                st.markdown(f"### Mismatches (count: {len(mismatches)})")
+                                if not mismatches.empty:
+                                    mm_display_cols = [c for c in [
+                                        'Narration', 'Normalized Narration', 'Old Category', 'Category', 'Parser Confidence', 'ML Prediction', 'ML Confidence', 'Final Category'
+                                    ] if c in mismatches.columns]
+                                    st.dataframe(mismatches[mm_display_cols].head(200), use_container_width=True)
+
+                                # Provide downloads for detailed reports
+                                if per_class_df is not None:
+                                    buf = io.StringIO()
+                                    per_class_df.to_csv(buf, index=False)
+                                    st.download_button('Download per-class metrics CSV', data=buf.getvalue(), file_name='per_class_metrics.csv')
+
+                                if cm_df is not None:
+                                    buf2 = io.StringIO()
+                                    cm_df.to_csv(buf2)
+                                    st.download_button('Download confusion matrix CSV', data=buf2.getvalue(), file_name='confusion_matrix.csv')
+
+                                if not mismatches.empty:
+                                    buf3 = io.StringIO()
+                                    mismatches.to_csv(buf3, index=False)
+                                    st.download_button('Download mismatches CSV', data=buf3.getvalue(), file_name='mismatches.csv')
+
+                            else:
+                                st.info('Old Category labels are not present in the uploaded file or detailed report not requested.')
+
+                except Exception as e:
+                    st.error(f"ML evaluation failed: {e}")
 
     except Exception as e:
         st.error(f"Error: {e}")

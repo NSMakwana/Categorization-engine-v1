@@ -42,8 +42,12 @@ INTENT_RULES = {
         "regex": [r"\bCHRG:"],
     },
     "salary": {
-        "terms": ["SALARY", "PAYROLL", "WAGES"],
-        "regex": [],
+        "terms": [
+            "SALARY", "PAYROLL", "WAGES", "SALARY CREDIT",
+            "SAL CREDIT", "WAGE CREDIT", "SLRY", "STIPEND",
+            "MONTHLY SALARY", "SALARY PAYMENT",
+        ],
+        "regex": [r"\bSAL[/\-]\b", r"\bSAL\s+CR\b", r"\bSALARY\s+TRANSFER\b"],
     },
     "tax": {
         "terms": ["TAX", "GST", "TDS", "INCOME TAX"],
@@ -54,31 +58,55 @@ INTENT_RULES = {
         "regex": [],
     },
     "investment": {
-        "terms": ["INVESTMENT", "INVESTMENTS", "MUTUAL FUND", "SIP", "DEMAT", "FINANCE"],
-        "regex": [],
+        "terms": [
+            "INVESTMENT", "INVESTMENTS", "MUTUAL FUND", "SIP", "DEMAT",
+            "BROKERAGE", "SECURITIES", "EQUITY", "NSE", "BSE",
+            "TRADING ACCOUNT", "PORTFOLIO",
+        ],
+        "regex": [r"\bSIP\s*-?\d+", r"\bMF\s+UNITS\b"],
     },
     "insurance": {
-        "terms": ["INSURANCE", "PREMIUM", "LIC", "PRAN", "APY"],
-        "regex": [],
+        "terms": [
+            "INSURANCE", "INS PREMIUM", "POLICY PREMIUM", "LIC PREMIUM",
+            "LIC POLICY", "LIC OF INDIA", "LIFE INS", "HEALTH INS",
+            "MOTOR INS", "VEHICLE INS", "PREMIUM PAYMENT",
+            "PRAN", "APY", "INSURER",
+        ],
+        "regex": [r"\bINS\s+PREM\b", r"\bPOLICY\s+NO\b"],
     },
     "recharge": {
-        "terms": ["RECHARGE", "PREPAID", "POSTPAID"],
+        "terms": ["RECHARGE", "PREPAID RECHARGE", "POSTPAID BILL", "DTH RECHARGE", "MOBILE RECHARGE"],
         "regex": [r"\b[A-Z]*RECHARGE\b"],
     },
     "travel": {
-        "terms": ["IRCTC", "MAKEMYTRIP", "YATRA", "TRAVEL"],
+        "terms": ["IRCTC", "MAKEMYTRIP", "YATRA", "TRAVEL BOOKING", "FLIGHT TICKET", "BUS TICKET", "TRAIN TICKET"],
         "regex": [],
     },
     "utility": {
-        "terms": ["ELECTRICITY", "WATER", "GAS", "BILL PAYMENT", "BILL", "RENT"],
-        "regex": [],
+        "terms": [
+            "ELECTRICITY BILL", "WATER BILL", "GAS BILL",
+            "BILL PAYMENT", "UTILITY PAYMENT",
+            "ELECTRIC SUPPLY", "POWER SUPPLY",
+            "BESCOM", "MSEDCL", "MSEB", "TNEB", "KSEB", "WBSEDCL",
+            "UPPCL", "BSES", "TATA POWER", "ADANI ELECTRICITY", "CESC",
+            "MAHANAGAR GAS", "IGL", "GUJARAT GAS", "PIPED GAS",
+        ],
+        "regex": [r"\bELEC\s+BILL\b", r"\bEBILL\b"],
     },
     "loan": {
-        "terms": ["LOAN", "EMI", "FINANCE"],
-        "regex": [r"\bEMI\d+"],
+        "terms": [
+            "LOAN", "EMI", "LOAN EMI", "EMI PAYMENT", "LOANEMI",
+            "HOME LOAN", "PERSONAL LOAN", "CAR LOAN", "VEHICLE LOAN",
+            "GOLD LOAN", "EDUCATION LOAN", "BUSINESS LOAN",
+            "REPAYMENT", "LOAN REPAYMENT", "EMI DUE",
+        ],
+        "regex": [r"\bEMI[-/]?\d+", r"\bEMIAMT\b", r"\bLOAN\s*-?\s*EMI\b"],
     },
     "fuel": {
-        "terms": ["FUEL", "PETROL", "DIESEL", "FILLING", "FILLINGS"],
+        "terms": [
+            "FUEL", "PETROL", "DIESEL", "FILLING", "FILLINGS",
+            "PETROL PUMP", "FUEL STATION", "PETROLEUM",
+        ],
         "regex": [],
     },
     "fixed_deposit": {
@@ -94,8 +122,8 @@ INTENT_RULES = {
         "regex": [],
     },
     "demand_draft": {
-        "terms": ["DEMAND DRAFT", "DD ISSUE", "DD CHARGES"],
-        "regex": [r"(?<![A-Z0-9])DD(?![A-Z0-9])"],
+        "terms": ["DEMAND DRAFT", "DD ISSUE", "DD CHARGES", "DD PURCHASE"],
+        "regex": [r"\bDD\s+ISSUE\b", r"\bDD\s+CHARG", r"\bDEMAND\s+DRAFT\b"],
     },
     "direct_debit": {
         "terms": ["DIRECT DEBIT", "NACH", "ECS", "ACH", "ACHD"],

@@ -39,7 +39,7 @@ def _set_quality(result, quality, confidence):
 
 
 def _extract_upi_id(result, narration):
-    match = re.search(r"[\w.-]+@[\w.-]+", narration)
+    match = re.search(r"[A-Z0-9._+\-]{2,}@[A-Z0-9.\-]{2,}", narration, re.IGNORECASE)
 
     if not match:
         return
